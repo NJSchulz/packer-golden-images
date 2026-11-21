@@ -44,7 +44,9 @@ flowchart LR
    dispatch, poll and post are in [`orchestrator/`](orchestrator/).
    Heads-ups: every event is posted as `INFORMATION` (Failed only *looks*
    critical because of its Ops symptom), message-event alerts don't
-   auto-clear, and the Orchestrator poll loop has no timeout.
+   auto-clear, and the Orchestrator poll loop stops after `timeoutMinutes`
+   (default 90), cancels the GitHub run and posts FAILED with
+   `Status: timed_out` (see [Poll timeout](orchestrator/README.md#poll-timeout)).
 
 ## Repository layout
 
