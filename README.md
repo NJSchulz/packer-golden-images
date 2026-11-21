@@ -20,7 +20,7 @@ flowchart LR
   P -- publish in place --> SL[(Local Content Library)]
   SL -- subscription sync --> SUB[(Subscribed Content Library)]
   SUB --> VCFA[VCF Automation]
-  GH -. lifecycle events .-> OPS[VCF Operations]
+  O -- lifecycle events<br/>/suite-api/api/events --> OPS[VCF Operations]
 ```
 
 1. **VCF Operations Orchestrator** (or you, from the Actions tab) dispatches
@@ -37,7 +37,11 @@ flowchart LR
    consumes, verifies the subscriber caught up, and writes a provenance
    manifest.
 6. Lifecycle events (started / succeeded / failed) are reported to **VCF
-   Operations** by the Orchestrator side of the flow.
+   Operations** by the Orchestrator side of the flow. The messages carry the
+   tokens `GOLDRUSH_BUILD_STARTED`, `GOLDRUSH_BUILD_SUCCEEDED` and
+   `GOLDRUSH_BUILD_FAILED`, and the matching symptom and alert definitions are
+   in [`vcf-operations/`](vcf-operations/). Heads-up: message-event alerts
+   don't auto-clear; they stay active and refresh on each new event.
 
 ## Repository layout
 
@@ -56,6 +60,7 @@ packer/                              # build side (derived from Packer Examples 
   ansible/                           #   base / users / configure / clean roles
   config/example/*.pkrvars.hcl.example  # copy these and fill in your values
 docs/gotchas.md                      # the seven things that broke, and the fixes
+vcf-operations/                      # VCF Operations symptom + alert definitions
 .env.example                         # runtime secrets for local runs
 THIRD_PARTY_LICENSES/                # upstream BSD-2-Clause license + notice
 ```

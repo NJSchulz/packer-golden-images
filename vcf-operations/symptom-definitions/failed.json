@@ -1,0 +1,17 @@
+{
+  "id": "SymptomDefinition-goldrush-build-failed",
+  "name": "Golden Image Build Failed",
+  "adapterKindKey": "VMWARE",
+  "resourceKindKey": "VMwareAdapter Instance",
+  "waitCycles": 1,
+  "cancelCycles": 1,
+  "state": {
+    "severity": "CRITICAL",
+    "condition": {
+      "type": "CONDITION_MESSAGE_EVENT",
+      "eventType": "NOTIFICATION",
+      "message": "GOLDRUSH_BUILD_FAILED",
+      "operator": "CONTAINS"
+    }
+  }
+}

@@ -27,7 +27,7 @@ on:
       image_name:
         description: "Existing vSphere Content Library item name"
         required: true
-        default: "linux-oracle-9.4-v0.22.1"
+        default: "linux-oracle-9.4-golden"
       source_library:
         description: "Authoritative local Content Library that Packer publishes into"
         required: true

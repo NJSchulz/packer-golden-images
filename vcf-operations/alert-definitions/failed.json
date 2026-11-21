@@ -1,0 +1,30 @@
+{
+  "id": "AlertDefinition-goldrush-build-failed",
+  "name": "Golden Image Build Failed",
+  "description": "",
+  "adapterKindKey": "VMWARE",
+  "resourceKindKey": "VMwareAdapter Instance",
+  "waitCycles": 1,
+  "cancelCycles": 1,
+  "type": 15,
+  "subType": 21,
+  "states": [
+    {
+      "severity": "AUTO",
+      "base-symptom-set": {
+        "type": "SYMPTOM_SET",
+        "relation": "SELF",
+        "symptomSetOperator": "AND",
+        "symptomDefinitionIds": [
+          "SymptomDefinition-goldrush-build-failed"
+        ],
+        "alertConditions": []
+      },
+      "impact": {
+        "impactType": "BADGE",
+        "detail": "health"
+      }
+    }
+  ],
+  "forVCDTenants": false
+}

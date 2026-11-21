@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ops:alert-definition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ops="http://webservice.vmware.com/vRealizeOpsMgr/1.0/">
+  <ops:id>AlertDefinition-goldrush-build-failed</ops:id>
+  <ops:name>Golden Image Build Failed</ops:name>
+  <ops:description></ops:description>
+  <ops:adapterKindKey>VMWARE</ops:adapterKindKey>
+  <ops:resourceKindKey>VMwareAdapter Instance</ops:resourceKindKey>
+  <ops:waitCycles>1</ops:waitCycles>
+  <ops:cancelCycles>1</ops:cancelCycles>
+  <ops:type>15</ops:type>
+  <ops:subType>21</ops:subType>
+  <ops:states>
+    <ops:state severity="AUTO">
+      <ops:symptom-set>
+        <ops:symptomDefinitionIds>
+          <ops:symptomDefinitionId>SymptomDefinition-goldrush-build-failed</ops:symptomDefinitionId>
+        </ops:symptomDefinitionIds>
+        <ops:alertConditions/>
+        <ops:relation>SELF</ops:relation>
+        <ops:symptomSetOperator>AND</ops:symptomSetOperator>
+      </ops:symptom-set>
+      <ops:impact>
+        <ops:impactType>BADGE</ops:impactType>
+        <ops:detail>health</ops:detail>
+      </ops:impact>
+    </ops:state>
+  </ops:states>
+  <ops:forVCDTenants>false</ops:forVCDTenants>
+</ops:alert-definition>

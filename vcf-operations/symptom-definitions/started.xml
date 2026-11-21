@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ops:symptom-definition xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ops="http://webservice.vmware.com/vRealizeOpsMgr/1.0/" id="SymptomDefinition-goldrush-build-started" adapterKindKey="VMWARE" resourceKindKey="VMwareAdapter Instance" waitCycles="1" cancelCycles="1">
+  <ops:name>Golden Image Build Started</ops:name>
+  <ops:state severity="INFORMATION">
+    <ops:condition xsi:type="ops:messageEventCondition" eventType="NOTIFICATION" operator="CONTAINS">
+      <ops:message>GOLDRUSH_BUILD_STARTED</ops:message>
+    </ops:condition>
+  </ops:state>
+</ops:symptom-definition>
