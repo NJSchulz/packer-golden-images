@@ -1,0 +1,17 @@
+{
+  "id": "SymptomDefinition-goldrush-build-succeeded",
+  "name": "Golden Image Build Succeeded",
+  "adapterKindKey": "VMWARE",
+  "resourceKindKey": "VMwareAdapter Instance",
+  "waitCycles": 1,
+  "cancelCycles": 1,
+  "state": {
+    "severity": "INFORMATION",
+    "condition": {
+      "type": "CONDITION_MESSAGE_EVENT",
+      "eventType": "NOTIFICATION",
+      "message": "GOLDRUSH_BUILD_SUCCEEDED",
+      "operator": "CONTAINS"
+    }
+  }
+}

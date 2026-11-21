@@ -1,0 +1,13 @@
+{
+  "_comment": "Example only: attribute names and types. Create this config element in the Orchestrator client and fill in your own values there. Never commit real values.",
+  "name": "goldRush-VCFOps",
+  "id": "22222222-2222-4222-8222-000000000002",
+  "description": "VCF Operations credentials and the target vCenter adapter instance for goldRush events.",
+  "attributes": [
+    { "name": "opsHost",       "type": "string",       "example": "vcf-ops.example.com", "note": "Informational; the REST host URL is used for calls." },
+    { "name": "opsUsername",   "type": "string",       "example": "<OPS_SERVICE_ACCOUNT>" },
+    { "name": "opsAuthSource", "type": "string",       "example": "<AUTH_SOURCE e.g. Local or your SSO source>" },
+    { "name": "opsPassword",   "type": "SecureString", "example": "<OPS_PASSWORD>" },
+    { "name": "vCenterName",   "type": "string",       "example": "vcenter.example.com", "note": "NEW: name of the vCenter adapter instance in VCF Operations (usually the vCenter FQDN). The lab version hardcoded this." }
+  ]
+}

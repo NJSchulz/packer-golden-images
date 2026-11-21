@@ -1,0 +1,35 @@
+# Common build settings (credential-free).
+
+common_vm_version           = 19
+common_tools_upgrade_policy = true
+common_remove_cdrom         = true
+
+# Publish straight into a local Content Library as an OVF item. The workflow
+# relies on Packer replacing the item in place (same item UUID, new
+# content_version), which is what downstream subscribers/VCF Automation expect.
+common_template_conversion         = false
+common_content_library             = "<SOURCE_CONTENT_LIBRARY>"
+common_content_library_enabled     = true
+common_content_library_ovf         = true
+common_content_library_destroy     = true
+common_content_library_skip_export = false
+
+common_ovf_export_enabled   = false
+common_ovf_export_overwrite = true
+
+# Where the installer ISO lives (see docs/gotchas.md for uploading large ISOs).
+common_iso_datastore               = "<ISO_DATASTORE>"
+common_iso_content_library         = "<SOURCE_CONTENT_LIBRARY>"
+common_iso_content_library_enabled = false
+
+common_data_source   = "http"
+common_http_ip       = null
+common_http_port_min = 8000
+common_http_port_max = 8099
+# The RHEL install plus its %post RHSM registration and CDN downloads can take
+# ~25 min on nested/lab hosts; the 20m default timed out before first boot.
+common_ip_wait_timeout   = "60m"
+common_ip_settle_timeout = "5s"
+common_shutdown_timeout  = "15m"
+
+common_hcp_packer_registry_enabled = false

@@ -1,0 +1,15 @@
+# Oracle Linux 9 build settings.
+
+vm_guest_os_name    = "oracle"
+vm_guest_os_version = "9.4"
+vm_guest_os_type    = "oracleLinux9_64Guest"
+
+vm_firmware    = "efi-secure"
+vm_cdrom_count = 0
+vm_boot_order  = "cdrom,disk"
+
+# Use the full DVD ISO, not the small boot ISO: the kickstart installs from the
+# attached media, and the boot ISO has no BaseOS/AppStream repositories on it.
+iso_datastore_path       = "iso/linux/oracle-linux/9/amd64"
+iso_content_library_item = "OracleLinux-R9-U4-x86_64-dvd"
+iso_file                 = "OracleLinux-R9-U4-x86_64-dvd.iso"

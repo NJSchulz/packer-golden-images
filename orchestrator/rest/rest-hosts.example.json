@@ -1,0 +1,63 @@
+{
+  "_comment": "Example REST hosts and operations to create with the Orchestrator HTTP-REST plug-in ('Add a REST host', 'Add a REST operation'). Host authentication is NONE: the scripts add Authorization headers themselves. IDs are placeholders that match the workflow XML.",
+  "hosts": [
+    {
+      "name": "GitHub API",
+      "id": "33333333-3333-4333-8333-000000000001",
+      "url": "https://api.github.com",
+      "authentication": "NONE",
+      "connectionTimeout": 30,
+      "operationTimeout": 60,
+      "hostVerification": true,
+      "operations": [
+        {
+          "name": "Trigger goldRush Golden Image Build",
+          "id": "44444444-4444-4444-8444-000000000001",
+          "method": "POST",
+          "urlTemplate": "/repos/{owner}/{repo}/actions/workflows/{workflowFile}/dispatches",
+          "usedBy": "dispatchOperation"
+        },
+        {
+          "name": "Get runID",
+          "id": "44444444-4444-4444-8444-000000000002",
+          "method": "GET",
+          "urlTemplate": "/repos/{owner}/{repo}/actions/runs/{run_id}",
+          "usedBy": "getRunOperation"
+        }
+      ],
+      "note": "The find-run step builds its GET on the host itself: /repos/{owner}/{repo}/actions/workflows/{workflowFile}/runs?event=workflow_dispatch&per_page=20&branch={ref}"
+    },
+    {
+      "name": "VCF Operations API",
+      "id": "33333333-3333-4333-8333-000000000002",
+      "url": "https://vcf-ops.example.com",
+      "authentication": "NONE",
+      "connectionTimeout": 30,
+      "operationTimeout": 60,
+      "hostVerification": true,
+      "operations": [
+        {
+          "name": "tokenAcquisition",
+          "id": "44444444-4444-4444-8444-000000000011",
+          "method": "POST",
+          "urlTemplate": "/suite-api/api/auth/token/acquire",
+          "usedBy": "tokenOperation"
+        },
+        {
+          "name": "VCF Ops - Find Resource",
+          "id": "44444444-4444-4444-8444-000000000012",
+          "method": "GET",
+          "urlTemplate": "/suite-api/api/resources?name={name}",
+          "usedBy": "findResourceOperation"
+        },
+        {
+          "name": "VCF Ops - Create Event",
+          "id": "44444444-4444-4444-8444-000000000013",
+          "method": "POST",
+          "urlTemplate": "/suite-api/api/events",
+          "usedBy": "eventOperation"
+        }
+      ]
+    }
+  ]
+}

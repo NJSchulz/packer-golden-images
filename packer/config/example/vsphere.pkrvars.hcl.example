@@ -1,0 +1,14 @@
+# vSphere placement settings (credential-free).
+# Copy to vsphere.pkrvars.hcl in your config directory and fill in your values.
+# Credentials are injected at runtime with PKR_VAR_vsphere_username and
+# PKR_VAR_vsphere_password from GitHub Actions secrets. Never put them here.
+
+vsphere_endpoint            = "vcenter.example.com"
+vsphere_insecure_connection = true # set false once your runner trusts the vCenter CA
+
+vsphere_datacenter                     = "<DATACENTER>"
+vsphere_cluster                        = "<CLUSTER>"
+vsphere_datastore                      = "<DATASTORE>"
+vsphere_network                        = "<PORTGROUP_OR_SEGMENT>" # needs DHCP for the build VM
+vsphere_folder                         = "<VM_FOLDER>"
+vsphere_set_host_for_datastore_uploads = false
