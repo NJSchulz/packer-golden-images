@@ -62,7 +62,7 @@ Inputs (all strings): `imageName`, `sourceLibrary`, `subscribedLibrary`,
 `configPath`, `mode` (default `build`) and `workflowRef` (default `main`).
 
 ```text
-Trigger build -> Find dispatched run -> [Post STARTED] -> Check run status -> complete?
+Trigger build -> Find dispatched run -> [Post STARTED] -> Check run status -> complete or timed out?
                                                               ^                  | no
                                                               +---- Sleep 60s <--+
                                                                                  | yes
@@ -83,13 +83,60 @@ Trigger build -> Find dispatched run -> [Post STARTED] -> Check run status -> co
 3. **Post STARTED.** This happens only after the run is found, so the event
    already carries the run ID, number and URL.
 4. **Poll.** It calls `GET /repos/{owner}/{repo}/actions/runs/{run_id}` every
-   **60 seconds** until `status == "completed"`.
+   **60 seconds** until `status == "completed"`, or until the poll timeout
+   (`timeoutMinutes`, default **90**) runs out. On timeout it cancels the
+   GitHub run. See [Poll timeout](#poll-timeout).
 5. **Finish.** If `conclusion == "success"`, it posts **SUCCEEDED** and ends.
    Anything else (failure, cancelled, timed_out and so on) posts **FAILED**,
    logs a summary and ends the workflow with an error.
 
 Every GitHub call sends `Authorization: Bearer <githubToken>`,
 `Accept: application/vnd.github+json` and `X-GitHub-Api-Version: 2022-11-28`.
+
+## Poll timeout
+
+Both image build workflows stop polling after **`timeoutMinutes`** (a workflow
+attribute, default **90**). Change it in the workflow's **Variables** tab; no
+code edit is needed. A value of 0, a negative value or an empty value falls back
+to 90. There are no new inputs, so callers and the request form don't change.
+
+| Attribute | Type | Default | What |
+|---|---|---|---|
+| `timeoutMinutes` | number | `90` | How long to keep polling the GitHub run |
+| `pollStartMs` | number | `0` | Runtime only: epoch ms of the first status check. Leave the default at 0 |
+| `cancelHttpStatus` | number | `0` | Runtime only: HTTP status of the cancel call |
+
+How it works:
+
+1. **The clock starts on the first status check,** after the run is found
+   and STARTED is posted. The find step's own 20 x 3 s limit is unchanged.
+2. After each status read, if the run isn't `completed` and the time is up,
+   "Check run status" sends
+   `POST /repos/{owner}/{repo}/actions/runs/{run_id}/cancel` on the
+   `GitHub API` REST host, with the same headers as every other GitHub call.
+   - **202:** `runStatus = timed_out`, `runConclusion = cancelled`.
+   - **409** (the run finished in the meantime): it re-reads the run once and
+     uses the real result. If the run is now `completed`, the normal
+     SUCCEEDED or FAILED path applies.
+   - **Anything else:** it logs the response body and sets
+     `runStatus = timed_out`, `runConclusion = cancel_failed`.
+3. "Is GitHub run complete?" treats `timed_out` as done, so the run takes the
+   existing FAILED branch. That posts **`GOLDRUSH_BUILD_FAILED`** to VCF
+   Operations with `Status: timed_out`, and the workflow ends with
+   `goldRush build timed out after <N> minutes; GitHub run <run_id> cancel requested (HTTP <code>). ...`.
+
+Things to know:
+
+- **Granularity is about 60 seconds.** The check runs once per sleep cycle, so
+  the worst case is `timeoutMinutes` plus about a minute.
+- **The token needs Actions write** for the cancel. The dispatch already needs
+  it. Without it the cancel returns 403 (`cancel_failed`), but the FAILED event
+  and the error still fire.
+- **GitHub cancels asynchronously.** The workflow doesn't wait for the run to
+  reach `cancelled`. Packer gets a cancel signal and normally cleans up its VM,
+  but after the first real timeout, check vCenter for a leftover Packer VM.
+- Pick a value comfortably above a normal build. The Actions job's own
+  `timeout-minutes: 180` still applies on the GitHub side.
 
 ## The config elements (no values here)
 
@@ -140,10 +187,11 @@ Operations is set to Critical.
 
 ## Gotchas
 
-- **The poll never times out.** The check, sleep, check loop has no maximum.
-  If a GitHub run gets stuck, the Orchestrator run keeps sleeping and polling
-  forever. (The Actions job itself stops at its own `timeout-minutes: 180`, and
-  then it reports `completed`.) Adding a maximum is an easy improvement.
+- **The poll times out after `timeoutMinutes` (default 90).** Earlier
+  versions had no maximum, so a stuck GitHub run (for example, an offline
+  self-hosted runner) kept the Orchestrator run polling forever and never
+  posted FAILED. It now cancels the GitHub run and posts FAILED with
+  `Status: timed_out`. See [Poll timeout](#poll-timeout).
 - **STARTED means "found," not "dispatched."** If GitHub never schedules the
   run, the find step fails after about a minute, and no event is posted.
 - **Every event signs in and looks up the resource again,** so each one takes
