@@ -31,6 +31,6 @@ OS vars file.
 
 | # | Symptom | Fix / note | Where |
 |---|---------|------------|-------|
-| 8 | An Orchestrator run sits "running" for hours | The check-run / sleep 60s loop has **no maximum**. A stuck GitHub run keeps it polling forever. Add a max-polls counter if that bothers you. | `orchestrator/scripts/image-build/` |
+| 8 | An Orchestrator run sits "running" for hours | The check-run / sleep 60s loop used to have **no maximum**, so a stuck GitHub run kept it polling forever. It now stops after the `timeoutMinutes` attribute (default 90), cancels the GitHub run, and posts FAILED with `Status: timed_out`. The token needs Actions write for the cancel. | `orchestrator/scripts/image-build/03-check-goldrush-run-status.js`, `orchestrator/README.md` (Poll timeout) |
 | 9 | "Why is the failed build event INFORMATION?" | All three events are posted as `INFORMATION`; the Failed alert is critical only because its **symptom definition** is Critical. | `orchestrator/scripts/post-vcf-operations-event/`, `vcf-operations/` |
 | 10 | Workflow only works against one vCenter | The lab version hardcoded the vCenter FQDN in the resource lookup (script and REST URL). It's now the `vCenterName` attribute of the `goldRush-VCFOps` config element. | `orchestrator/config-elements/goldRush-VCFOps.example.json` |
