@@ -28,14 +28,22 @@ All six use the same settings:
   symptom set relation `SELF`, operator `AND`, one symptom each, and an empty
   description.
 
-### Heads-up: these are API representations, not a UI export
+### One-click import: `goldrush-alerts-export.xml`
 
-These files show how the definitions look in the **suite-api**
-(`/suite-api/api/symptomdefinitions` and `/suite-api/api/alertdefinitions`),
-with every real ID removed. They are **not** the official UI **Export**
-package. That export runs as a server-side job, and I didn't run it for this
-repo. If you want a one-click import, build the definitions once (below), then
-use **Export** in the UI to get a package you can import anywhere.
+`goldrush-alerts-export.xml` is the official **Export** file from the VCF
+Operations UI (alert definitions plus their symptom definitions), with only
+the real IDs swapped for readable placeholders. Import it under Alert
+Definitions with **Import**, and you're done.
+
+The JSON and XML files in `alert-definitions/` and `symptom-definitions/`
+show the same objects the way the **suite-api** returns them
+(`/suite-api/api/alertdefinitions` and `/suite-api/api/symptomdefinitions`).
+Use them if you'd rather create the definitions through the API.
+
+> **Heads-up: enable them in your policy.** The export carries
+> `disableInBasePolicy="true"`, so after import the alerts are off in the
+> base policy. Turn them on in the policy that covers your vCenter adapter
+> instance, or the events will arrive and nothing will fire.
 
 The `id` values are obviously fake placeholders, such as
 `SymptomDefinition-goldrush-build-failed`. They only keep the files

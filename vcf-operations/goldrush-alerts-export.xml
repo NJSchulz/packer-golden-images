@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?><alertContent>
+    <AlertDefinitions>
+        <AlertDefinition adapterKind="VMWARE" disableInBasePolicy="true" id="AlertDefinition-goldrush-build-failed" name="Golden Image Build Failed" resourceKind="VMwareAdapter Instance" subType="21" type="15">
+            <State severity="automatic">
+                <SymptomSet applyOn="self" operator="and" ref="SymptomDefinition-goldrush-build-failed"/>
+                <Impact key="health" type="badge"/>
+            </State>
+        </AlertDefinition>
+        <AlertDefinition adapterKind="VMWARE" disableInBasePolicy="true" id="AlertDefinition-goldrush-build-succeeded" name="Golden Image Build Succeeded" resourceKind="VMwareAdapter Instance" subType="21" type="15">
+            <State severity="automatic">
+                <SymptomSet applyOn="self" operator="and" ref="SymptomDefinition-goldrush-build-succeeded"/>
+                <Impact key="health" type="badge"/>
+            </State>
+        </AlertDefinition>
+        <AlertDefinition adapterKind="VMWARE" disableInBasePolicy="true" id="AlertDefinition-goldrush-build-started" name="Golden Image Build Started" resourceKind="VMwareAdapter Instance" subType="21" type="15">
+            <State severity="automatic">
+                <SymptomSet applyOn="self" operator="and" ref="SymptomDefinition-goldrush-build-started"/>
+                <Impact key="health" type="badge"/>
+            </State>
+        </AlertDefinition>
+    </AlertDefinitions>
+    <SymptomDefinitions>
+        <SymptomDefinition adapterKind="VMWARE" disableInBasePolicy="true" id="SymptomDefinition-goldrush-build-started" name="Golden Image Build Started" resourceKind="VMwareAdapter Instance">
+            <State severity="info">
+                <Condition eventMsg="GOLDRUSH_BUILD_STARTED" eventSubType="5" eventType="11" operator="contains" type="msg_event"/>
+            </State>
+        </SymptomDefinition>
+        <SymptomDefinition adapterKind="VMWARE" disableInBasePolicy="true" id="SymptomDefinition-goldrush-build-succeeded" name="Golden Image Build Succeeded" resourceKind="VMwareAdapter Instance">
+            <State severity="info">
+                <Condition eventMsg="GOLDRUSH_BUILD_SUCCEEDED" eventSubType="5" eventType="11" operator="contains" type="msg_event"/>
+            </State>
+        </SymptomDefinition>
+        <SymptomDefinition adapterKind="VMWARE" disableInBasePolicy="true" id="SymptomDefinition-goldrush-build-failed" name="Golden Image Build Failed" resourceKind="VMwareAdapter Instance">
+            <State severity="critical">
+                <Condition eventMsg="GOLDRUSH_BUILD_FAILED" eventSubType="5" eventType="11" operator="contains" type="msg_event"/>
+            </State>
+        </SymptomDefinition>
+    </SymptomDefinitions>
+</alertContent>
