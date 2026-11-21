@@ -40,8 +40,11 @@ flowchart LR
    Operations** by the Orchestrator side of the flow. The messages carry the
    tokens `GOLDRUSH_BUILD_STARTED`, `GOLDRUSH_BUILD_SUCCEEDED` and
    `GOLDRUSH_BUILD_FAILED`, and the matching symptom and alert definitions are
-   in [`vcf-operations/`](vcf-operations/). Heads-up: message-event alerts
-   don't auto-clear; they stay active and refresh on each new event.
+   in [`vcf-operations/`](vcf-operations/). The Orchestrator workflows that
+   dispatch, poll and post are in [`orchestrator/`](orchestrator/).
+   Heads-ups: every event is posted as `INFORMATION` (Failed only *looks*
+   critical because of its Ops symptom), message-event alerts don't
+   auto-clear, and the Orchestrator poll loop has no timeout.
 
 ## Repository layout
 
@@ -61,6 +64,7 @@ packer/                              # build side (derived from Packer Examples 
   config/example/*.pkrvars.hcl.example  # copy these and fill in your values
 docs/gotchas.md                      # the seven things that broke, and the fixes
 vcf-operations/                      # VCF Operations symptom + alert definitions
+orchestrator/                        # Orchestrator workflows, scripts, config element examples
 .env.example                         # runtime secrets for local runs
 THIRD_PARTY_LICENSES/                # upstream BSD-2-Clause license + notice
 ```
@@ -165,7 +169,9 @@ Accept: application/vnd.github+json
   "image_name": "linux-rhel-9.9-<version>", "request_id": "<CALLER_ID>"}}
 ```
 
-It then finds its own run by `request_id` in the run name and polls it.
+It then finds its own run by `request_id` in the run name and polls it. The
+real Orchestrator workflows (dispatch, find-run, poll and the VCF Operations
+events) are in [`orchestrator/`](orchestrator/).
 
 ### Locally
 

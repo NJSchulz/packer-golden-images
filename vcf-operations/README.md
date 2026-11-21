@@ -83,8 +83,17 @@ adapter instance's resource ID.
 **Not** the GitHub Actions workflow in this repo, which has no VCF Operations
 code at all. The **VCF Operations Orchestrator** side of the flow posts them.
 That's a workflow that dispatches the GitHub run, polls it until it finishes,
-and POSTs the started and finished events to `/suite-api/api/events`. That
-Orchestrator workflow isn't in this repo yet.
+and POSTs the started and finished events to `/suite-api/api/events`. The
+workflows, their scripts and example config elements are in
+[`../orchestrator/`](../orchestrator/).
+
+Two things worth knowing about the poster:
+
+- **Every event is posted with severity `INFORMATION`**, FAILED included. The
+  Failed alert is critical only because its symptom definition here is
+  Critical.
+- **Its poll loop has no timeout.** A stuck GitHub run keeps the Orchestrator
+  run polling every 60 seconds indefinitely. See the Orchestrator README.
 
 ## Good to know
 

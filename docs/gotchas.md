@@ -1,6 +1,7 @@
 # Gotchas (and where the fix lives)
 
-Seven things that broke on the way to a green RHEL 9 build. Each one gets the
+Seven things that broke on the way to a green RHEL 9 build (plus three
+Orchestrator-side notes at the end). Each one gets the
 full story in the blog series; this is the quick map from symptom to fix.
 
 | # | Symptom | Fix | Where |
@@ -25,3 +26,11 @@ curl -k -u '<VSPHERE_USER>@vsphere.local' \
 
 The path after `/folder/` must match `iso_datastore_path` + `iso_file` in your
 OS vars file.
+
+## Orchestrator side
+
+| # | Symptom | Fix / note | Where |
+|---|---------|------------|-------|
+| 8 | An Orchestrator run sits "running" for hours | The check-run / sleep 60s loop has **no maximum**. A stuck GitHub run keeps it polling forever. Add a max-polls counter if that bothers you. | `orchestrator/scripts/image-build/` |
+| 9 | "Why is the failed build event INFORMATION?" | All three events are posted as `INFORMATION`; the Failed alert is critical only because its **symptom definition** is Critical. | `orchestrator/scripts/post-vcf-operations-event/`, `vcf-operations/` |
+| 10 | Workflow only works against one vCenter | The lab version hardcoded the vCenter FQDN in the resource lookup (script and REST URL). It's now the `vCenterName` attribute of the `goldRush-VCFOps` config element. | `orchestrator/config-elements/goldRush-VCFOps.example.json` |
