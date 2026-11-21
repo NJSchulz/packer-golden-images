@@ -1,0 +1,6 @@
+# Red Hat Subscription Manager settings.
+#
+# Intentionally contains no values. build.sh requires this file for Red Hat
+# Enterprise Linux builds, but the credentials are supplied only at runtime
+# through PKR_VAR_rhsm_username and PKR_VAR_rhsm_password (GitHub Actions
+# secrets RHSM_USERNAME and RHSM_PASSWORD). Do not commit credentials here.

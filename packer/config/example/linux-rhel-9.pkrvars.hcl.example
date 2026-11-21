@@ -1,0 +1,15 @@
+# Red Hat Enterprise Linux 9 build settings.
+
+vm_guest_os_name    = "rhel"
+vm_guest_os_version = "9.9"
+vm_guest_os_type    = "rhel9_64Guest"
+
+vm_firmware    = "efi-secure"
+vm_cdrom_count = 0
+vm_boot_order  = "cdrom,disk"
+
+# The kickstart installs from the attached ISO (cdrom), so this must be the
+# full DVD image, not the network boot ISO.
+iso_datastore_path       = "iso/linux/rhel/9/amd64"
+iso_content_library_item = "rhel-9.9-x86_64-dvd"
+iso_file                 = "rhel-9.9-x86_64-dvd.iso"

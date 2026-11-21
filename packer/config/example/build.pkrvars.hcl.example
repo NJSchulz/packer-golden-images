@@ -1,0 +1,5 @@
+# Build account settings (credential-free).
+# build_password, build_password_encrypted and build_key are injected at
+# runtime with PKR_VAR_build_* from GitHub Actions secrets/variables.
+
+build_username = "packer"

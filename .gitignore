@@ -1,0 +1,48 @@
+# Real-value Packer variable files. Only *.pkrvars.hcl.example is committed.
+**/*.pkrvars.hcl
+**/*.auto.pkrvars.hcl
+!**/*.pkrvars.hcl.example
+packer/config/*
+!packer/config/example/
+
+# Environment and credential files
+.env
+.env.*
+!.env.example
+**/credentials*
+**/secrets*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.jks
+
+# Packer caches, logs and build output
+packer_cache/
+**/packer_cache/
+.packer.d/
+crash.log
+*.log
+manifest.json
+**/manifests/
+artifacts/
+output-*/
+
+# Images and disks
+*.iso
+*.ova
+*.ovf
+*.vmdk
+*.mf
+
+# Terraform (not used here, but keep caches out if you add it)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store

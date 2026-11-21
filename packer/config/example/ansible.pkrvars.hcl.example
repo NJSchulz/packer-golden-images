@@ -1,0 +1,4 @@
+# Ansible account settings (credential-free).
+# The public SSH key is injected at runtime with PKR_VAR_ansible_key.
+
+ansible_username = "ansible"

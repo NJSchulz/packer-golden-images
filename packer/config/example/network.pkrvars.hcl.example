@@ -1,0 +1,2 @@
+# VM network settings.
+# DHCP is used by default; no static network variables are required.

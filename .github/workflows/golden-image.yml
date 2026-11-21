@@ -1,0 +1,431 @@
+name: Golden Image Build
+run-name: "Golden Image ${{ inputs.mode }} ${{ inputs.os }} ${{ inputs.image_name }} ${{ inputs.request_id }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Validate connectivity or run a full golden-image build"
+        required: true
+        default: validate
+        type: choice
+        options:
+          - validate
+          - build
+      os:
+        description: "Guest OS profile to build"
+        required: true
+        default: oracle-9
+        type: choice
+        options:
+          - oracle-9
+          - rhel-9
+      request_id:
+        description: "Optional caller correlation ID (shown in the run name)"
+        required: false
+        default: ""
+      image_name:
+        description: "Existing vSphere Content Library item name"
+        required: true
+        default: "linux-oracle-9.4-v0.22.1"
+      source_library:
+        description: "Authoritative local Content Library that Packer publishes into"
+        required: true
+        default: "golden-images"
+      subscribed_library:
+        description: "Subscribed Content Library consumed downstream by VCFA"
+        required: true
+        default: "golden-images-subscribed"
+      config_path:
+        description: "Packer config directory: absolute path on the runner, or relative to packer/"
+        required: true
+        default: "/opt/golden-images/config"
+
+concurrency:
+  group: golden-image-${{ inputs.image_name }}
+  cancel-in-progress: false
+
+jobs:
+  golden-image:
+    runs-on: self-hosted
+    timeout-minutes: 180
+
+    permissions:
+      contents: read
+
+    env:
+      SOURCE_VCENTER: ${{ secrets.SOURCE_VCENTER }}
+      SOURCE_VCENTER_USERNAME: ${{ secrets.SOURCE_VCENTER_USERNAME }}
+      SOURCE_VCENTER_PASSWORD: ${{ secrets.SOURCE_VCENTER_PASSWORD }}
+      SUBSCRIBER_VCENTER: ${{ secrets.SUBSCRIBER_VCENTER }}
+      SUBSCRIBER_VCENTER_USERNAME: ${{ secrets.SUBSCRIBER_VCENTER_USERNAME }}
+      SUBSCRIBER_VCENTER_PASSWORD: ${{ secrets.SUBSCRIBER_VCENTER_PASSWORD }}
+      PACKER_ROOT: ${{ github.workspace }}/packer
+      IMAGE_NAME: ${{ inputs.image_name }}
+      SOURCE_LIBRARY_NAME: ${{ inputs.source_library }}
+      SUBSCRIBED_LIBRARY_NAME: ${{ inputs.subscribed_library }}
+      CONFIG_PATH: ${{ inputs.config_path }}
+
+      # Packer publishes to the source-side vCenter. Sensitive/runtime values
+      # are injected without writing credentials into checked-in pkrvars files.
+      PKR_VAR_vsphere_username: ${{ secrets.SOURCE_VCENTER_USERNAME }}
+      PKR_VAR_vsphere_password: ${{ secrets.SOURCE_VCENTER_PASSWORD }}
+      PKR_VAR_build_password: ${{ secrets.BUILD_PASSWORD }}
+      PKR_VAR_build_password_encrypted: ${{ secrets.BUILD_PASSWORD_ENCRYPTED }}
+      PKR_VAR_build_key: ${{ vars.BUILD_KEY }}
+      PKR_VAR_ansible_key: ${{ vars.ANSIBLE_KEY }}
+
+      # RHSM credentials are only exposed to RHEL builds.
+      PKR_VAR_rhsm_username: ${{ inputs.os == 'rhel-9' && secrets.RHSM_USERNAME || '' }}
+      PKR_VAR_rhsm_password: ${{ inputs.os == 'rhel-9' && secrets.RHSM_PASSWORD || '' }}
+
+    steps:
+      # The original setup checked out a second, private Packer repository here
+      # (actions/checkout with repository/token/ref/path). In this companion
+      # repo the Packer side lives in packer/, so one checkout is enough.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Capture Packer source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          PACKER_SOURCE_REF="$(git -C "${PACKER_ROOT}" rev-parse HEAD)"
+          echo "PACKER_SOURCE_REF=${PACKER_SOURCE_REF}" >> "$GITHUB_ENV"
+          echo "Packer source: ${GITHUB_REPOSITORY}@${PACKER_SOURCE_REF}"
+
+          # Real-value pkrvars files are never committed. Point config_path at
+          # a directory on the self-hosted runner (absolute path), or at a
+          # directory relative to packer/ in a private fork.
+          if [[ "${CONFIG_PATH}" == /* ]]; then
+            CONFIG_DIR="${CONFIG_PATH}"
+          else
+            CONFIG_DIR="${PACKER_ROOT}/${CONFIG_PATH}"
+          fi
+          echo "CONFIG_DIR=${CONFIG_DIR}" >> "$GITHUB_ENV"
+          echo "Packer config directory: ${CONFIG_DIR}"
+
+      - name: Resolve guest OS profile
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "${{ inputs.os }}" in
+            oracle-9)
+              OS_DIST="Oracle Linux"
+              OS_VARS_FILE="linux-oracle-9.pkrvars.hcl"
+              OS_EXTRA_FILES=""
+              ;;
+            rhel-9)
+              OS_DIST="Red Hat Enterprise Linux"
+              OS_VARS_FILE="linux-rhel-9.pkrvars.hcl"
+              OS_EXTRA_FILES="rhsm.pkrvars.hcl"
+              ;;
+            *)
+              echo "::error::Unsupported os profile: ${{ inputs.os }}"
+              exit 1
+              ;;
+          esac
+
+          os_vars_path="${CONFIG_DIR}/${OS_VARS_FILE}"
+          if [[ ! -f "${os_vars_path}" ]]; then
+            echo "::error::Required Packer config file is missing: ${os_vars_path}"
+            exit 1
+          fi
+
+          # Derive the Content Library item prefix from the same values Packer
+          # uses for vm_name (linux-<vm_guest_os_name>-<vm_guest_os_version>-).
+          hcl_value() {
+            sed -nE "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*\"([^\"]*)\".*/\1/p" "${os_vars_path}" | head -1
+          }
+          os_name="$(hcl_value vm_guest_os_name)"
+          os_version="$(hcl_value vm_guest_os_version)"
+          if [[ -z "${os_name}" || -z "${os_version}" ]]; then
+            echo "::error::vm_guest_os_name/vm_guest_os_version not found in ${os_vars_path}"
+            exit 1
+          fi
+
+          {
+            echo "OS_DIST=${OS_DIST}"
+            echo "OS_VARS_FILE=${OS_VARS_FILE}"
+            echo "OS_EXTRA_FILES=${OS_EXTRA_FILES}"
+            echo "OS_IMAGE_PREFIX=linux-${os_name}-${os_version}-"
+          } >> "$GITHUB_ENV"
+
+          echo "OS profile: ${{ inputs.os }} (${OS_DIST}), vars file ${OS_VARS_FILE}"
+          echo "Expected image name prefix: linux-${os_name}-${os_version}-"
+
+      - name: Set stable Packer image identity
+        if: ${{ inputs.mode == 'build' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          expected_prefix="${OS_IMAGE_PREFIX}"
+          if [[ "${IMAGE_NAME}" != "${expected_prefix}"* ]]; then
+            echo "::error::Image name must begin with '${expected_prefix}'. Received: ${IMAGE_NAME}"
+            exit 1
+          fi
+
+          PACKER_IMAGE_VERSION="${IMAGE_NAME#${expected_prefix}}"
+          if [[ -z "${PACKER_IMAGE_VERSION}" ]]; then
+            echo "::error::Unable to derive the stable Packer image version from ${IMAGE_NAME}."
+            exit 1
+          fi
+
+          # The upstream Packer definition derives its build version from the
+          # current Git branch name. Create a local-only branch at the exact
+          # checked-out SHA so the VM/Content Library item retains its stable
+          # name while PACKER_SOURCE_REF continues to record immutable source.
+          git -C "${PACKER_ROOT}" checkout -B "${PACKER_IMAGE_VERSION}" "${PACKER_SOURCE_REF}"
+
+          CURRENT_BRANCH="$(git -C "${PACKER_ROOT}" rev-parse --abbrev-ref HEAD)"
+          if [[ "${CURRENT_BRANCH}" != "${PACKER_IMAGE_VERSION}" ]]; then
+            echo "::error::Expected Packer branch '${PACKER_IMAGE_VERSION}', got '${CURRENT_BRANCH}'."
+            exit 1
+          fi
+
+          echo "PACKER_IMAGE_VERSION=${PACKER_IMAGE_VERSION}" >> "$GITHUB_ENV"
+          echo "Stable Packer image version: ${PACKER_IMAGE_VERSION}"
+          echo "Source Content Library: ${SOURCE_LIBRARY_NAME}"
+          echo "Subscribed Content Library: ${SUBSCRIBED_LIBRARY_NAME}"
+          echo "Expected Content Library item: ${IMAGE_NAME}"
+
+      - name: Validate runner prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for cmd in bash curl git jq packer sha256sum; do
+            command -v "$cmd" >/dev/null 2>&1 || {
+              echo "::error::Required command '$cmd' was not found on the self-hosted runner."
+              exit 1
+            }
+          done
+
+          required_connection_vars=(
+            SOURCE_VCENTER
+            SOURCE_VCENTER_USERNAME
+            SOURCE_VCENTER_PASSWORD
+            SUBSCRIBER_VCENTER
+            SUBSCRIBER_VCENTER_USERNAME
+            SUBSCRIBER_VCENTER_PASSWORD
+          )
+
+          for var_name in "${required_connection_vars[@]}"; do
+            if [[ -z "${!var_name:-}" ]]; then
+              echo "::error::Required vCenter connection secret '$var_name' is not configured."
+              exit 1
+            fi
+          done
+
+          if [[ ! -x "${PACKER_ROOT}/build.sh" ]]; then
+            echo "::error::${PACKER_ROOT}/build.sh does not exist or is not executable."
+            exit 1
+          fi
+
+          if [[ "${{ inputs.mode }}" == "build" ]]; then
+            command -v ansible >/dev/null 2>&1 || {
+              echo "::error::Required command 'ansible' was not found on the self-hosted runner."
+              exit 1
+            }
+
+            required_files=(
+              common.pkrvars.hcl
+              vsphere.pkrvars.hcl
+              build.pkrvars.hcl
+              ansible.pkrvars.hcl
+              "${OS_VARS_FILE}"
+              linux-storage.pkrvars.hcl
+              network.pkrvars.hcl
+              proxy.pkrvars.hcl
+              ${OS_EXTRA_FILES}
+            )
+
+            for file in "${required_files[@]}"; do
+              if [[ ! -f "${CONFIG_DIR}/${file}" ]]; then
+                echo "::error::Required Packer config file is missing: ${CONFIG_DIR}/${file}"
+                exit 1
+              fi
+            done
+
+            required_runtime_vars=(
+              PKR_VAR_vsphere_username
+              PKR_VAR_vsphere_password
+              PKR_VAR_build_password
+              PKR_VAR_build_password_encrypted
+              PKR_VAR_build_key
+              PKR_VAR_ansible_key
+              PACKER_IMAGE_VERSION
+            )
+
+            if [[ "${{ inputs.os }}" == "rhel-9" ]]; then
+              required_runtime_vars+=(PKR_VAR_rhsm_username PKR_VAR_rhsm_password)
+            fi
+
+            for var_name in "${required_runtime_vars[@]}"; do
+              if [[ -z "${!var_name:-}" ]]; then
+                echo "::error::Required runtime variable '$var_name' is not configured."
+                exit 1
+              fi
+            done
+          fi
+
+          chmod +x scripts/*.sh
+          mkdir -p artifacts
+
+          echo "Runner prerequisites validated."
+          packer version
+
+      - name: Generate immutable build version
+        if: ${{ inputs.mode == 'build' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${PACKER_SOURCE_REF:0:7}"
+          IMAGE_VERSION="$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER}-${SHORT_SHA}"
+          echo "IMAGE_VERSION=${IMAGE_VERSION}" >> "$GITHUB_ENV"
+          echo "Build version: ${IMAGE_VERSION}"
+
+      - name: Capture current source Content Library metadata
+        env:
+          VCENTER: ${{ secrets.SOURCE_VCENTER }}
+          VCENTER_USERNAME: ${{ secrets.SOURCE_VCENTER_USERNAME }}
+          VCENTER_PASSWORD: ${{ secrets.SOURCE_VCENTER_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rc=0
+          scripts/library-item-details.sh "${SOURCE_LIBRARY_NAME}" "${IMAGE_NAME}" > artifacts/before.json || rc=$?
+          if (( rc == 3 )); then
+            # First build of this image: Packer will create the item.
+            echo "FIRST_BUILD=true" >> "$GITHUB_ENV"
+            jq -n --arg name "${IMAGE_NAME}" --arg library_name "${SOURCE_LIBRARY_NAME}" \
+              '{exists: false, name: $name, library_name: $library_name}' > artifacts/before.json
+            echo "::notice::${SOURCE_LIBRARY_NAME}/${IMAGE_NAME} does not exist yet; this build will create it."
+          elif (( rc != 0 )); then
+            exit "$rc"
+          else
+            echo "FIRST_BUILD=false" >> "$GITHUB_ENV"
+          fi
+          cat artifacts/before.json
+
+      - name: Capture current subscribed Content Library metadata
+        env:
+          VCENTER: ${{ secrets.SUBSCRIBER_VCENTER }}
+          VCENTER_USERNAME: ${{ secrets.SUBSCRIBER_VCENTER_USERNAME }}
+          VCENTER_PASSWORD: ${{ secrets.SUBSCRIBER_VCENTER_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rc=0
+          scripts/library-item-details.sh "${SUBSCRIBED_LIBRARY_NAME}" "${IMAGE_NAME}" > artifacts/subscriber-before.json || rc=$?
+          if (( rc == 3 )); then
+            jq -n --arg name "${IMAGE_NAME}" --arg library_name "${SUBSCRIBED_LIBRARY_NAME}" \
+              '{exists: false, name: $name, library_name: $library_name}' > artifacts/subscriber-before.json
+            echo "::notice::${SUBSCRIBED_LIBRARY_NAME}/${IMAGE_NAME} does not exist yet; it will appear after the library sync."
+          elif (( rc != 0 )); then
+            exit "$rc"
+          fi
+          cat artifacts/subscriber-before.json
+
+      - name: Connectivity validation complete
+        if: ${{ inputs.mode == 'validate' }}
+        shell: bash
+        run: |
+          echo "Preflight validation completed successfully."
+          echo "Source: ${SOURCE_LIBRARY_NAME} on SOURCE_VCENTER"
+          echo "Subscriber: ${SUBSCRIBED_LIBRARY_NAME} on SUBSCRIBER_VCENTER"
+          echo "No image build was performed."
+
+      - name: Build and publish ${{ inputs.os }} golden image with Packer
+        if: ${{ inputs.mode == 'build' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "${PACKER_ROOT}"
+
+          # --auto-continue performs one fully noninteractive build and exits
+          # cleanly after Packer completes.
+          # build.sh returns Packer's real exit status for --auto-continue runs
+          # and uses -on-error=abort so failed builds clean up after themselves.
+          ./build.sh \
+            --os Linux \
+            --dist "${OS_DIST}" \
+            --version 9 \
+            --auto-continue \
+            "${CONFIG_DIR}"
+
+      - name: Capture updated source Content Library metadata
+        if: ${{ inputs.mode == 'build' }}
+        env:
+          VCENTER: ${{ secrets.SOURCE_VCENTER }}
+          VCENTER_USERNAME: ${{ secrets.SOURCE_VCENTER_USERNAME }}
+          VCENTER_PASSWORD: ${{ secrets.SOURCE_VCENTER_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/library-item-details.sh "${SOURCE_LIBRARY_NAME}" "${IMAGE_NAME}" | tee artifacts/after.json
+
+      - name: Verify in-place source Content Library update
+        if: ${{ inputs.mode == 'build' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${FIRST_BUILD}" == "true" ]]; then
+            # Nothing to compare against; the capture step above already
+            # failed if Packer did not create the item.
+            echo "First build: created $(jq -r '.library_name + "/" + .name + " (" + .item_id + ")"' artifacts/after.json); in-place comparison skipped."
+          else
+            scripts/validate-library-update.sh artifacts/before.json artifacts/after.json
+          fi
+
+      - name: Synchronize subscribed Content Library item
+        if: ${{ inputs.mode == 'build' }}
+        env:
+          VCENTER: ${{ secrets.SUBSCRIBER_VCENTER }}
+          VCENTER_USERNAME: ${{ secrets.SUBSCRIBER_VCENTER_USERNAME }}
+          VCENTER_PASSWORD: ${{ secrets.SUBSCRIBER_VCENTER_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/sync-subscribed-library-item.sh \
+            "${SUBSCRIBED_LIBRARY_NAME}" \
+            "${IMAGE_NAME}" \
+            artifacts/after.json \
+            600
+
+      - name: Capture synchronized subscribed Content Library metadata
+        if: ${{ inputs.mode == 'build' }}
+        env:
+          VCENTER: ${{ secrets.SUBSCRIBER_VCENTER }}
+          VCENTER_USERNAME: ${{ secrets.SUBSCRIBER_VCENTER_USERNAME }}
+          VCENTER_PASSWORD: ${{ secrets.SUBSCRIBER_VCENTER_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/library-item-details.sh "${SUBSCRIBED_LIBRARY_NAME}" "${IMAGE_NAME}" | tee artifacts/subscriber-after.json
+
+      - name: Create provenance manifest and checksum
+        if: ${{ inputs.mode == 'build' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          scripts/create-build-manifest.sh \
+            artifacts/before.json \
+            artifacts/after.json \
+            artifacts/golden-image-manifest.json
+
+          echo "Manifest SHA256:"
+          cat artifacts/golden-image-manifest.json.sha256
+
+      - name: Upload build evidence
+        if: ${{ inputs.mode == 'build' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-image-${{ env.IMAGE_VERSION }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 90
