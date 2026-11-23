@@ -8,7 +8,10 @@ vm_guest_os_type    = "ubuntu64Guest"
 # common.pkrvars.hcl because build.sh passes this file last.
 vm_firmware         = "efi"
 common_vm_version   = 22
-vm_cdrom_count      = 0
+# Must remain 1: VCFA delivers cloudConfig as a vApp user-data property
+# using ovfEnvironmentTransport=iso (_ovfenv-*.iso). A guest with no CD-ROM
+# cannot attach that ISO, so cloud-init falls back to DataSourceNone.
+vm_cdrom_count      = 1
 vm_boot_order       = "cdrom,disk"
 vm_cpu_count        = 2
 vm_mem_size         = 2048
