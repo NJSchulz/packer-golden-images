@@ -41,7 +41,9 @@
       loop:
         - /etc/cloud/cloud.cfg.d/subiquity-disable-cloudinit-networking.cfg
         - /etc/cloud/cloud.cfg.d/99-installer.cfg
+        - /etc/cloud/cloud.cfg.d/90-installer-network.cfg
         - /etc/netplan/00-installer-config.yaml
+        - /etc/netplan/50-cloud-init.yaml
       when: ansible_distribution == 'Ubuntu'
     - name: Ensure disable_vmware_customization is set to false in cloud.cfg
       ansible.builtin.blockinfile:
