@@ -20,6 +20,7 @@ on:
         options:
           - oracle-9
           - rhel-9
+          - ubuntu-24.04
       request_id:
         description: "Optional caller correlation ID (shown in the run name)"
         required: false
@@ -117,11 +118,19 @@ jobs:
               OS_DIST="Oracle Linux"
               OS_VARS_FILE="linux-oracle-9.pkrvars.hcl"
               OS_EXTRA_FILES=""
+              OS_PACKER_VERSION="9"
               ;;
             rhel-9)
               OS_DIST="Red Hat Enterprise Linux"
               OS_VARS_FILE="linux-rhel-9.pkrvars.hcl"
               OS_EXTRA_FILES="rhsm.pkrvars.hcl"
+              OS_PACKER_VERSION="9"
+              ;;
+            ubuntu-24.04)
+              OS_DIST="Ubuntu Server"
+              OS_VARS_FILE="linux-ubuntu-24-04-lts.pkrvars.hcl"
+              OS_EXTRA_FILES=""
+              OS_PACKER_VERSION="24.04"
               ;;
             *)
               echo "::error::Unsupported os profile: ${{ inputs.os }}"
@@ -151,10 +160,11 @@ jobs:
             echo "OS_DIST=${OS_DIST}"
             echo "OS_VARS_FILE=${OS_VARS_FILE}"
             echo "OS_EXTRA_FILES=${OS_EXTRA_FILES}"
+            echo "OS_PACKER_VERSION=${OS_PACKER_VERSION}"
             echo "OS_IMAGE_PREFIX=linux-${os_name}-${os_version}-"
           } >> "$GITHUB_ENV"
 
-          echo "OS profile: ${{ inputs.os }} (${OS_DIST}), vars file ${OS_VARS_FILE}"
+          echo "OS profile: ${{ inputs.os }} (${OS_DIST}), vars file ${OS_VARS_FILE}, packer --version ${OS_PACKER_VERSION}"
           echo "Expected image name prefix: linux-${os_name}-${os_version}-"
 
       - name: Set stable Packer image identity
@@ -354,7 +364,7 @@ jobs:
           ./build.sh \
             --os Linux \
             --dist "${OS_DIST}" \
-            --version 9 \
+            --version "${OS_PACKER_VERSION}" \
             --auto-continue \
             "${CONFIG_DIR}"
 

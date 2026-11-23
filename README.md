@@ -1,9 +1,9 @@
 # packer-golden-images
 
 Companion repo for the **goldRush** series on [jonschulz.com](https://jonschulz.com):
-one GitHub Actions workflow that builds **RHEL 9** and **Oracle Linux 9** golden
-images with Packer, publishes them into a vSphere Content Library *in place*,
-and proves it worked.
+one GitHub Actions workflow that builds **RHEL 9**, **Oracle Linux 9**, and
+**Ubuntu 24.04 LTS** golden images with Packer, publishes them into a vSphere
+Content Library *in place*, and proves it worked.
 
 It's a sanitized copy of a working reference implementation for a common
 customer challenge: keeping golden images current without breaking the catalog
@@ -18,7 +18,7 @@ line for line.
 flowchart LR
   O[VCF Operations Orchestrator] -- workflow_dispatch<br/>request_id --> GH[GitHub Actions<br/>golden-image.yml]
   GH -- runs on --> R[Self-hosted runner]
-  R --> P[Packer vsphere-iso<br/>+ kickstart + Ansible]
+  R --> P[Packer vsphere-iso<br/>+ kickstart or autoinstall + Ansible]
   P -- publish in place --> SL[(Local Content Library)]
   SL -- subscription sync --> SUB[(Subscribed Content Library)]
   SUB --> VCFA[VCF Automation]
@@ -30,8 +30,8 @@ flowchart LR
    `request_id` so the caller can find its own run.
 2. The job runs on a **self-hosted runner** that can reach vCenter.
 3. `packer/build.sh` drives **Packer's `vsphere-iso` builder**: the VM boots the
-   DVD ISO, installs from a **kickstart**, then **Ansible** updates, hardens and
-   cleans it.
+   ISO, installs from a **kickstart** (RHEL / Oracle Linux) or Ubuntu
+   **autoinstall**, then **Ansible** updates, hardens and cleans it.
 4. Packer exports the VM as an OVF straight into a **local Content Library**,
    replacing the existing item *in place* (same item UUID, new
    `content_version`).
@@ -61,9 +61,10 @@ scripts/                             # Content Library helpers (vCenter REST API
   create-build-manifest.sh           #   provenance manifest + SHA-256
 packer/                              # build side (derived from Packer Examples for vSphere)
   build.sh                           #   CI-safe build driver
-  project.json                       #   trimmed to RHEL 9 + Oracle Linux 9
+  project.json                       #   trimmed to RHEL 9, Oracle Linux 9, Ubuntu 24.04 LTS
   builds/linux/rhel/9/               #   vsphere-iso template, variables, kickstart
   builds/linux/oracle/9/
+  builds/linux/ubuntu/24-04-lts/     #   vsphere-iso template, variables, autoinstall user-data
   ansible/                           #   base / users / configure / clean roles
   config/example/*.pkrvars.hcl.example  # copy these and fill in your values
 docs/gotchas.md                      # the seven things that broke, and the fixes
@@ -76,8 +77,9 @@ THIRD_PARTY_LICENSES/                # upstream BSD-2-Clause license + notice
 ## Prerequisites
 
 - vCenter (vSphere 8 / VCF 9 era) with:
-  - a datastore holding the **full DVD ISO** for each OS (see
-    [docs/gotchas.md](docs/gotchas.md) for uploading a 16 GB ISO with `curl`),
+  - a datastore holding the **full DVD ISO** for RHEL / Oracle Linux, or the
+    Ubuntu live-server ISO (see [docs/gotchas.md](docs/gotchas.md) for
+    uploading a large ISO with `curl`),
   - a **local Content Library** Packer publishes into, and
   - a **subscribed Content Library** (on the same or another vCenter) that VCF
     Automation consumes. Automatic sync can stay off; the workflow triggers it.
@@ -86,8 +88,8 @@ THIRD_PARTY_LICENSES/                # upstream BSD-2-Clause license + notice
   the subscriber side.
 - A **self-hosted GitHub Actions runner** with `bash`, `curl`, `git`, `jq`,
   `sha256sum`, **Packer >= 1.12** and **ansible-core**, and network access to
-  vCenter and the build network (Packer serves the kickstart over HTTP on
-  ports 8000-8099).
+  vCenter and the build network (Packer serves kickstart or Ubuntu autoinstall
+  over HTTP on ports 8000-8099).
 - A Red Hat account for RHEL builds (Simple Content Access, so no
   `--autosubscribe`).
 
@@ -117,7 +119,7 @@ Then replace the placeholders:
 | `<VM_FOLDER>` | `vsphere.pkrvars.hcl` | VM folder for build VMs |
 | `<SOURCE_CONTENT_LIBRARY>` | `common.pkrvars.hcl` | local library Packer publishes into |
 | `<ISO_DATASTORE>` | `common.pkrvars.hcl` | datastore holding the ISOs |
-| `iso_*` values | `linux-rhel-9.pkrvars.hcl`, `linux-oracle-9.pkrvars.hcl` | ISO path / file name on that datastore |
+| `iso_*` values | `linux-rhel-9.pkrvars.hcl`, `linux-oracle-9.pkrvars.hcl`, `linux-ubuntu-24-04-lts.pkrvars.hcl` | ISO path / file name on that datastore |
 
 `build.pkrvars.hcl`, `ansible.pkrvars.hcl`, `network.pkrvars.hcl`,
 `proxy.pkrvars.hcl` and `rhsm.pkrvars.hcl` hold no secrets; `rhsm.pkrvars.hcl`
@@ -149,8 +151,8 @@ For local runs, [`.env.example`](.env.example) lists the same values as
 
 ```text
 mode:               validate | build
-os:                 oracle-9 | rhel-9
-image_name:         linux-rhel-9.9-<version>   # must start with linux-<os_name>-<os_version>-
+os:                 oracle-9 | rhel-9 | ubuntu-24.04
+image_name:         linux-rhel-9.9-<version>   # or linux-ubuntu-24.04-lts-<version>; must start with linux-<os_name>-<os_version>-
 source_library:     <your local library>
 subscribed_library: <your subscribed library>
 config_path:        /opt/golden-images/config

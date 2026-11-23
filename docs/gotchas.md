@@ -34,3 +34,12 @@ OS vars file.
 | 8 | An Orchestrator run sits "running" for hours | The check-run / sleep 60s loop used to have **no maximum**, so a stuck GitHub run kept it polling forever. It now stops after the `timeoutMinutes` attribute (default 90), cancels the GitHub run, and posts FAILED with `Status: timed_out`. The token needs Actions write for the cancel. | `orchestrator/scripts/image-build/03-check-goldrush-run-status.js`, `orchestrator/README.md` (Poll timeout) |
 | 9 | "Why is the failed build event INFORMATION?" | All three events are posted as `INFORMATION`; the Failed alert is critical only because its **symptom definition** is Critical. | `orchestrator/scripts/post-vcf-operations-event/`, `vcf-operations/` |
 | 10 | Workflow only works against one vCenter | The original version hardcoded the vCenter FQDN in the resource lookup (script and REST URL). It's now the `vCenterName` attribute of the `goldRush-VCFOps` config element. | `orchestrator/config-elements/goldRush-VCFOps.example.json` |
+
+## Ubuntu 24.04 LTS
+
+| # | Symptom | Fix / note | Where |
+|---|---------|------------|-------|
+| 11 | Ubuntu autoinstall never starts, or Packer waits on an interactive installer | `vm_boot_order` must be `cdrom,disk`. The upstream template default is `disk,cdrom`. | `packer/config/example/linux-ubuntu-24-04-lts.pkrvars.hcl.example` |
+| 12 | A deployed VM ignores VCF Automation `cloudConfig` | Set `vm_guest_os_cloudinit = true`. The Ansible playbook default is `false`, which **removes** the cloud-init package on Ubuntu. With it true, the Debian `configure` role keeps cloud-init, writes `datasource_list: [ VMware, OVF, None ]`, and runs `cloud-init clean --machine-id`. | `packer/ansible/roles/configure/tasks/debian.yml`, `packer/ansible/roles/clean/tasks/debian.yml` |
+| 13 | Autoinstall fails with "storage" or volume-group errors on a 25 GB disk | The shared `linux-storage.pkrvars.hcl` LVM layout is sized for 40 GB and will not fit. Override storage in the Ubuntu OS vars (EFI + boot + swap + ext4 root). | `packer/config/example/linux-ubuntu-24-04-lts.pkrvars.hcl.example` |
+| 14 | `build.sh` cannot find `builds/linux/ubuntu/24-04-lts/` | Pass `--version 24.04`, not `24.04 LTS` and not `9`. The helper turns `24.04` into the `24-04-lts` directory name. The goldRush workflow now passes `OS_PACKER_VERSION` per `os` profile. | `packer/build.sh`, `.github/workflows/golden-image.yml` |
