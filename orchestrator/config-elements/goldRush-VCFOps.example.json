@@ -8,6 +8,6 @@
     { "name": "opsUsername",   "type": "string",       "example": "<OPS_SERVICE_ACCOUNT>" },
     { "name": "opsAuthSource", "type": "string",       "example": "<AUTH_SOURCE e.g. Local or your SSO source>" },
     { "name": "opsPassword",   "type": "SecureString", "example": "<OPS_PASSWORD>" },
-    { "name": "vCenterName",   "type": "string",       "example": "vcenter.example.com", "note": "NEW: name of the vCenter adapter instance in VCF Operations (usually the vCenter FQDN). The lab version hardcoded this." }
+    { "name": "vCenterName",   "type": "string",       "example": "vcenter.example.com", "note": "NEW: name of the vCenter adapter instance in VCF Operations (usually the vCenter FQDN). The original version hardcoded this." }
   ]
 }

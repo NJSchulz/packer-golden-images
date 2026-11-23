@@ -21,7 +21,7 @@ var payload = {
         source_library: sourceLibrary,
         subscribed_library: subscribedLibrary,
         config_path: configPath
-        // The lab version also sent packer_ref, for a second (private) Packer
+        // The original version also sent packer_ref, for a second (private) Packer
         // repo. This repo keeps Packer in packer/, so the input no longer exists
         // and GitHub would reject the dispatch (HTTP 422) if it were sent.
     }
@@ -31,7 +31,7 @@ var body = JSON.stringify(payload);
 
 // Create request from the configured POST REST operation.
 // URL template: /repos/{owner}/{repo}/actions/workflows/{workflowFile}/dispatches
-// (the lab operation had owner/repo/file hardcoded in the URL).
+// (the original operation had owner/repo/file hardcoded in the URL).
 var request = dispatchOperation.createRequest(
     [githubOwner, githubRepository, workflowFile],
     body
