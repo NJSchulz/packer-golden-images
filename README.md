@@ -5,10 +5,12 @@ one GitHub Actions workflow that builds **RHEL 9** and **Oracle Linux 9** golden
 images with Packer, publishes them into a vSphere Content Library *in place*,
 and proves it worked.
 
-This is a sanitized copy of the code that runs in my lab. Every lab-specific
-value has been swapped for a placeholder, so you'll need to fill in your own
-environment before anything builds. The code is kept close to the original so
-the blog posts can quote it line for line.
+It's a sanitized copy of a working reference implementation for a common
+customer challenge: keeping golden images current without breaking the catalog
+items that consume them. Every environment-specific value has been swapped for
+a placeholder, so you'll need to fill in your own environment before anything
+builds. The code is kept close to the original so the blog posts can quote it
+line for line.
 
 ## How it fits together
 
