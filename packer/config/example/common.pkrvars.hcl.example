@@ -27,7 +27,7 @@ common_http_ip       = null
 common_http_port_min = 8000
 common_http_port_max = 8099
 # The RHEL install plus its %post RHSM registration and CDN downloads can take
-# ~25 min on nested/lab hosts; the 20m default timed out before first boot.
+# ~25 min on nested hosts; the 20m default timed out before first boot.
 common_ip_wait_timeout   = "60m"
 common_ip_settle_timeout = "5s"
 common_shutdown_timeout  = "15m"

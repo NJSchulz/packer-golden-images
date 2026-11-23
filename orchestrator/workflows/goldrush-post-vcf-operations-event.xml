@@ -72,7 +72,7 @@ var opsAuthSource =
     opsConfig.getAttributeWithKey("opsAuthSource").value;
 
 // vCenter (adapter instance) name as it appears in VCF Operations, e.g. the
-// vCenter FQDN. The lab version hardcoded this twice (here and in the REST
+// vCenter FQDN. The original version hardcoded this twice (here and in the REST
 // operation URL); it now comes from the config element.
 var vCenterName =
     opsConfig.getAttributeWithKey("vCenterName").value;

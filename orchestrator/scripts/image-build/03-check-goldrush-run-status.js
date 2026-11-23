@@ -18,7 +18,7 @@ var limitMinutes = (timeoutMinutes == null || timeoutMinutes <= 0) ? 90 : timeou
 System.log("Checking GitHub run ID: " + runId);
 
 // URL template: /repos/{owner}/{repo}/actions/runs/{run_id}
-// (the lab operation had owner/repo hardcoded in the URL).
+// (the original operation had owner/repo hardcoded in the URL).
 var request = getRunOperation.createRequest(
     [githubOwner, githubRepository, String(runId)],
     null

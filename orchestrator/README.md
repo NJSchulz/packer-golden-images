@@ -197,9 +197,9 @@ Operations is set to Critical.
 - **Every event signs in and looks up the resource again,** so each one takes
   three VCF Operations calls. That's simple and stateless, and it's fine at
   this volume.
-- **What changed from the lab version for portability:**
-  - The vCenter name moved into `goldRush-VCFOps.vCenterName`. In the lab it
-    was hardcoded in both the script and the REST operation URL.
+- **What changed from the original version for portability:**
+  - The vCenter name moved into `goldRush-VCFOps.vCenterName`. In the original
+    environment it was hardcoded in both the script and the REST operation URL.
   - The GitHub REST operations now take `{owner}`, `{repo}` and
     `{workflowFile}` from `goldRush-GitHub` instead of having them hardcoded
     in the URL.
