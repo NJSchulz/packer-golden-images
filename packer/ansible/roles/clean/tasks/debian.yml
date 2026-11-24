@@ -86,3 +86,30 @@
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/.bash_history"
     state: absent
+
+# Lock the Packer build user so the published image has no usable BUILD_USER
+# login. The script is invoked from the Ubuntu 24.04 Packer shutdown_command
+# after SSH has already authenticated, then the guest is powered off.
+- name: Installing the build-user lock script
+  ansible.builtin.copy:
+    dest: /usr/local/sbin/goldrush-lock-build-user
+    owner: root
+    group: root
+    mode: "0750"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      user="${1:-}"
+      if [[ -z "${user}" || "${user}" == "root" ]]; then
+        echo "refusing to lock an empty or root account" >&2
+        exit 1
+      fi
+      if ! getent passwd "${user}" >/dev/null; then
+        echo "build user ${user} not present; nothing to lock"
+        exit 0
+      fi
+      passwd -l "${user}"
+      usermod -s /usr/sbin/nologin "${user}"
+      rm -f "/home/${user}/.ssh/authorized_keys"
+      rm -f "/etc/sudoers.d/${user}"
+  when: ansible_distribution == 'Ubuntu'

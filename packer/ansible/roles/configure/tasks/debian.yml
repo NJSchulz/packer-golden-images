@@ -45,22 +45,20 @@
         - /etc/netplan/00-installer-config.yaml
         - /etc/netplan/50-cloud-init.yaml
       when: ansible_distribution == 'Ubuntu'
-    - name: Install a first-boot DHCP netplan fallback
-      ansible.builtin.copy:
-        dest: /etc/netplan/99-dhcp-en.yaml
-        owner: root
-        group: root
-        mode: "0600"
-        # Not 50-cloud-init.yaml: typical VCFA runcmd deletes that name.
-        # match en* so vmx-22 ens33 (or other PCI names) still get DHCP.
-        content: |
-          network:
-            version: 2
-            ethernets:
-              all-en:
-                match:
-                  name: en*
-                dhcp4: true
+    - name: Find leftover cloud-init network-disable files
+      ansible.builtin.find:
+        paths: /etc/cloud/cloud.cfg.d
+        patterns: "*.cfg"
+        contains: 'network:\s*\{config:\s*disabled\}'
+      register: cloud_net_disabled
+      when: ansible_distribution == 'Ubuntu'
+    - name: Remove leftover cloud-init network-disable files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ cloud_net_disabled.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path }}"
       when: ansible_distribution == 'Ubuntu'
     - name: Ensure disable_vmware_customization is set to false in cloud.cfg
       ansible.builtin.blockinfile:
@@ -78,38 +76,6 @@
       become_user: root
       when: ansible_distribution == 'Ubuntu' and ansible_distribution_major_version | int >= 24
 
-
-# ubuntu-cc-v0.4 ships a pre-created schulz user. VCFA cloudConfig often
-# write_files with owner: schulz:schulz in the init stage (before
-# users_groups, and without defer: true) and later runcmd assumes ~schulz
-# exists. Without this user, chown fails and later write_files (including
-# the blueprint netplan) may never be written.
-- name: Ensure the schulz user exists for VCFA cloudConfig
-  when: enable_cloudinit == 'true' and ansible_distribution == 'Ubuntu'
-  block:
-    - name: Creating the local group for schulz
-      ansible.builtin.group:
-        name: schulz
-    - name: Creating the local user for schulz
-      ansible.builtin.user:
-        name: schulz
-        group: schulz
-        groups: sudo,adm,cdrom,dip,plugdev
-        append: true
-        password: "!"
-        shell: /bin/bash
-        create_home: true
-        home: /home/schulz
-    - name: Managing the authorized key for schulz
-      ansible.posix.authorized_key:
-        user: schulz
-        key: "{{ build_key }}"
-      no_log: true
-    - name: Managing sudoers.d for schulz
-      community.general.sudoers:
-        name: schulz
-        user: schulz
-        commands: ALL
 
 - name: Replacing dhcp with static for Debian
   ansible.builtin.lineinfile:

@@ -158,7 +158,8 @@ source "vsphere-iso" "linux-ubuntu" {
   ]
   ip_wait_timeout   = var.common_ip_wait_timeout
   ip_settle_timeout = var.common_ip_settle_timeout
-  shutdown_command  = "echo '${var.build_password}' | sudo -S -E shutdown -P now"
+  // Lock BUILD_USER after SSH auth, then power off so the published image has no usable packer login.
+  shutdown_command  = "echo '${var.build_password}' | sudo -S -E /bin/bash -c '/usr/local/sbin/goldrush-lock-build-user ${var.build_username} && shutdown -P now'"
   shutdown_timeout  = var.common_shutdown_timeout
 
   // Communicator Settings and Credentials
