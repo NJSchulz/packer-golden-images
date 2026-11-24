@@ -1,0 +1,90 @@
+# Ubuntu Server 24.04 LTS build settings.
+
+vm_guest_os_name    = "ubuntu"
+vm_guest_os_version = "24.04-lts"
+vm_guest_os_type    = "ubuntu64Guest"
+
+# EFI without secure boot, hardware 22. common_vm_version here overrides
+# common.pkrvars.hcl because build.sh passes this file last.
+vm_firmware         = "efi"
+common_vm_version   = 22
+# Must remain 1: VCFA delivers cloudConfig as a vApp user-data property
+# using ovfEnvironmentTransport=iso (_ovfenv-*.iso). A guest with no CD-ROM
+# cannot attach that ISO, so cloud-init falls back to DataSourceNone.
+vm_cdrom_count      = 1
+vm_boot_order       = "cdrom,disk"
+vm_cpu_count        = 2
+vm_mem_size         = 2048
+
+# Required so Ansible keeps cloud-init, sets the VMware/OVF datasource, and
+# runs `cloud-init clean --machine-id` before capture. The playbook default
+# is false, which removes the cloud-init package.
+vm_guest_os_cloudinit = true
+
+# 25 GB disk. The shared linux-storage.pkrvars.hcl LVM layout is sized for a
+# 40 GB disk and will not fit; build.sh still loads that file, then this one
+# overrides the storage variables.
+vm_disk_size     = 25600
+vm_disk_device   = "sda"
+vm_disk_use_swap = true
+vm_disk_partitions = [
+  {
+    name = "efi"
+    size = 1024
+    format = {
+      label  = "EFIFS"
+      fstype = "fat32"
+    }
+    mount = {
+      path    = "/boot/efi"
+      options = ""
+    }
+    volume_group = ""
+  },
+  {
+    name = "boot"
+    size = 1024
+    format = {
+      label  = "BOOTFS"
+      fstype = "ext4"
+    }
+    mount = {
+      path    = "/boot"
+      options = ""
+    }
+    volume_group = ""
+  },
+  {
+    name = "swap"
+    size = 1024
+    format = {
+      label  = "SWAPFS"
+      fstype = "swap"
+    }
+    mount = {
+      path    = ""
+      options = ""
+    }
+    volume_group = ""
+  },
+  {
+    name = "root"
+    size = -1
+    format = {
+      label  = "ROOTFS"
+      fstype = "ext4"
+    }
+    mount = {
+      path    = "/"
+      options = ""
+    }
+    volume_group = ""
+  }
+]
+vm_disk_lvm = []
+
+# Conventional ISO path. If the ISO lives at the datastore root, set
+# iso_datastore_path = "iso" instead.
+iso_datastore_path       = "iso/linux/ubuntu-server/24-04-lts/amd64"
+iso_content_library_item = "ubuntu-24.04.2-live-server-amd64"
+iso_file                 = "ubuntu-24.04.2-live-server-amd64.iso"

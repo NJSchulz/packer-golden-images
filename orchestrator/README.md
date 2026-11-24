@@ -11,6 +11,7 @@ in [`../vcf-operations/`](../vcf-operations/). Tested on **Orchestrator 9.1.1**.
 workflows/
   goldrush-oracle-linux-9-image-build.xml   # main workflow (os: oracle-9)
   goldrush-rhel-9-image-build.xml           # thin copy (os: rhel-9)
+  goldrush-ubuntu-24-04-image-build.xml     # thin copy (os: ubuntu-24.04)
   goldrush-post-vcf-operations-event.xml    # subworkflow that posts the event
 scripts/
   image-build/*.js                          # every scriptable task / decision, readable
@@ -19,10 +20,10 @@ config-elements/*.example.json              # names + types only, no values
 rest/rest-hosts.example.json                # REST hosts + operations to create
 ```
 
-- **The RHEL 9 workflow is a copy of the Oracle Linux 9 one.** Only three
-  things differ: the `os` value it dispatches (`rhel-9`) and two log or error
-  strings. The scripts under `scripts/image-build/` are the Oracle Linux 9
-  versions.
+- **The RHEL 9 and Ubuntu 24.04 workflows are copies of the Oracle Linux 9 one.**
+  Only the `os` value each dispatches (`rhel-9` or `ubuntu-24.04`) and two log
+  or error strings differ. The scripts under `scripts/image-build/` are the
+  Oracle Linux 9 versions.
 - **Three test workflows are not included.** "VCFOps Integration",
   "findLatest - Image Build" and "Test GitHub API" were scaffolding I used
   while building this, and none of the three workflows above calls them.
@@ -46,7 +47,7 @@ recreate them:
    [`rest/rest-hosts.example.json`](rest/rest-hosts.example.json).
 2. Create the two **config elements**, `goldRush-GitHub` and
    `goldRush-VCFOps`, and fill in your own values.
-3. Create the **Post VCF Operations Event** workflow first, then the two image
+3. Create the **Post VCF Operations Event** workflow first, then the image
    build workflows. For each scriptable task, paste in the matching file from
    `scripts/`. Then bind the attributes to your config elements and REST
    objects.
